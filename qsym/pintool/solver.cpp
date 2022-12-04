@@ -94,7 +94,14 @@ Solver::Solver(
   , last_interested_(false)
   , syncing_(false)
   , start_time_(getTimeStamp())
-  , solving_time_(0)
+  , push_time_(0)
+  , pop_time_(0)
+  , reset_time_(0)
+  , assert_time_(0)
+  , check_time_(0)
+  , check_sat_count_(0)
+  , check_unsat_count_(0)
+  , check_unknown_count_(0)
   , last_pc_(0)
   , dep_forest_()
 {
@@ -108,29 +115,43 @@ Solver::Solver(
 }
 
 void Solver::push() {
+  uint64_t before = getTimeStamp();
   solver_.push();
+  uint64_t cur = getTimeStamp();
+  uint64_t elapsed = cur - before;
+  push_time_ += elapsed;
 }
 
 void Solver::reset() {
+  uint64_t before = getTimeStamp();
   solver_.reset();
+  uint64_t cur = getTimeStamp();
+  uint64_t elapsed = cur - before;
+  reset_time_ += elapsed;
 }
 
 void Solver::pop() {
+  uint64_t before = getTimeStamp();
   solver_.pop();
+  uint64_t cur = getTimeStamp();
+  uint64_t elapsed = cur - before;
+  pop_time_ += elapsed;
 }
 
 void Solver::add(z3::expr expr) {
-  if (!expr.is_const())
+  if (!expr.is_const()) {
+    uint64_t before = getTimeStamp();
     solver_.add(expr.simplify());
+    uint64_t cur = getTimeStamp();
+    uint64_t elapsed = cur - before;
+    assert_time_ += elapsed;
+  }
 }
 
 z3::check_result Solver::check() {
-  uint64_t before = getTimeStamp();
   z3::check_result res;
-  LOG_STAT(
-      "SMT: { \"solving_time\": " + decstr(solving_time_) + ", "
-      + "\"total_time\": " + decstr(before - start_time_) + " }\n");
-  // LOG_DEBUG("Constraints: " + solver_.to_smt2() + "\n");
+
+  uint64_t before = getTimeStamp();
   try {
     res = solver_.check();
   }
@@ -141,8 +162,34 @@ z3::check_result Solver::check() {
   }
   uint64_t cur = getTimeStamp();
   uint64_t elapsed = cur - before;
-  solving_time_ += elapsed;
-  LOG_STAT("SMT: { \"solving_time\": " + decstr(solving_time_) + " }\n");
+  check_time_ += elapsed;
+
+  char *res_str = nullptr;
+  switch (res) {
+  case z3::unsat:
+    check_unsat_count_ += 1;
+    res_str = "unsat";
+    break;
+  case z3::sat:
+    check_sat_count_ += 1;
+    res_str = "sat";
+    break;
+  case z3::unknown:
+    check_unknown_count_ += 1;
+    res_str = "unknown";
+    break;
+  }
+
+  LOG_STAT("SMT: { \"total_time\": " + decstr(cur - start_time_) +
+           ", \"push_time\": " + decstr(push_time_) +
+           ", \"pop_time\": " + decstr(pop_time_) +
+           ", \"reset_time\": " + decstr(reset_time_) +
+           ", \"assert_time\": " + decstr(assert_time_) +
+           ", \"check_time\": " + decstr(check_time_) +
+           ", \"unsat_count\": " + decstr(check_unsat_count_) +
+           ", \"sat_count\": " + decstr(check_sat_count_) +
+           ", \"unknown_count\": " + decstr(check_unknown_count_) + " }\n");
+
   return res;
 }
 

@@ -1,0 +1,2 @@
+third_party/z3/**				export-ignore
+third_party/pin-2.14-71313-gcc.4.4.7-linux/**	export-ignore

@@ -1,6 +1,7 @@
 #ifndef QSYM_SOLVER_H_
 #define QSYM_SOLVER_H_
 
+#include <cstdint>
 #include <z3++.h>
 #include <fstream>
 #include <sys/time.h>
@@ -59,7 +60,14 @@ protected:
   bool                  last_interested_;
   bool                  syncing_;
   uint64_t              start_time_;
-  uint64_t              solving_time_;
+  uint64_t              push_time_;
+  uint64_t              pop_time_;
+  uint64_t              reset_time_;
+  uint64_t              assert_time_;
+  uint64_t              check_time_;
+  uint64_t              check_sat_count_;
+  uint64_t              check_unsat_count_;
+  uint64_t              check_unknown_count_;
   ADDRINT               last_pc_;
   DependencyForest<Expr> dep_forest_;
 
